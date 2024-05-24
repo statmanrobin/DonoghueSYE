@@ -1,0 +1,30 @@
+Rank,team,OverallRating,OffRating,OffRank,DefRating,DefRank
+24,Alfred,0.76,0.59,23,1.87,22
+26,Bard,0.48,0.25,28,1.99,24
+8,Brockport St,1.78,1.08,16,0.36,6
+23,Buffalo St,0.81,1.08,15,2.88,27
+3,Clarkson,2.19,2.67,2,0.47,7
+4,Cortland St,2.14,1.89,7,0.31,4
+28,Elmira,0.35,0.2,29,2.52,26
+10,Geneseo St,1.73,0.96,17,0.33,5
+25,Hartwick,0.51,0.32,27,2.09,25
+1,Hobart & Smith,2.41,3.57,1,0.22,1
+27,Houghton,0.42,0.47,24,3.4,28
+2,Ithaca,2.28,2.56,5,0.31,3
+29,Keuka,0.3,0.38,25,4.2,29
+15,Nazareth,1.45,0.84,18,0.61,11
+16,Oswego St,1.37,0.7,21,0.58,9
+12,Plattsburgh St,1.62,1.35,9,0.79,13
+7,Rensselaer,1.86,2.02,6,0.79,14
+6,Rochester Tech,2.05,2.63,4,0.7,12
+21,Russell Sage,0.91,0.32,26,0.79,15
+9,Skidmore,1.75,1.32,10,0.56,8
+17,St John Fisher,1.32,1.11,14,1.17,18
+13,St Lawrence,1.57,1.27,11,0.81,16
+18,Suny Fredonia,1.29,1.42,8,1.59,19
+5,Suny New Paltz,2.1,2.65,3,0.61,10
+19,Suny Oneonta,1.1,1.19,12,1.89,23
+22,Suny Potsdam,0.86,0.63,22,1.63,20
+14,Union NY,1.49,1.14,13,0.84,17
+20,Utica,0.98,0.83,19,1.64,21
+11,Vassar,1.66,0.81,20,0.3,2

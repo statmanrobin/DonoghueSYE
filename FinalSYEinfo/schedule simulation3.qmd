@@ -1,0 +1,601 @@
+---
+title: "Season Simulation"
+author: "Hope Donoghue"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(elo)
+library(stringr)
+library(kableExtra) #a table lib, for example
+```
+
+```{r message=FALSE, warning=FALSE}
+schedule <- read_csv("Sim3Games.csv",show_col_types = FALSE)
+ratings <- read_csv("Teams3.csv",show_col_types = FALSE)
+avg_rating <- mean(ratings$OffRating)
+home=1.17
+nteams=length(ratings$team)
+```
+
+```{r}
+
+sum = rep(0,nteams)
+
+for(i in 1:nteams){
+  for(j in 1:nteams){
+    lambda1 = (ratings$OffRating[i] * ratings$DefRating[j])/(avg_rating)
+    
+    lambda2 = (ratings$OffRating[j] * ratings$DefRating[i])/(avg_rating)
+    
+    x <- probs(lambda1, lambda2)
+    sum[i] = sum[i] + (3*x[[1]]) + x[[2]]
+  }
+}
+
+expected_points <- sum/nteams
+ratings$OverallRating <- round(expected_points,2)
+```
+
+```{r}
+big_sched  <- left_join(schedule, ratings, by = c("away_team" = 
+                                                                "team")) 
+
+big_sched <- left_join(big_sched, ratings, by = c("home_team" = 
+                                                                "team"))
+
+big_sched <- big_sched %>%
+  rename("away_off" = OffRating.x, "away_def" = DefRating.x, "home_off" = OffRating.y, "home_def" = DefRating.y)
+```
+
+```{r}
+score_rate <- function(OffRating, DefRating, Home, HomeAdj = 1.11, AvgRating = 1.044){
+  return(OffRating*DefRating*HomeAdj^Home / AvgRating)
+}
+```
+
+```{r}
+# test function
+score_rate(1.27, 0.61,  1,1.17,1.25)
+score_rate(0.84, 0.81, -1,1.17,1.25)
+```
+
+Elo function
+
+```{r}
+elo_rating_auto <- function(sched,KValue=30,HomeAdv=30) {
+    
+    elo_ratings <-
+      elo.run(score(home_score, away_score) ~ adjust(home_team, HomeAdv) + away_team + k(KValue + abs(home_score - away_score) * 10), data = sched)
+    
+    elo_object <- as.matrix(elo_ratings)
+    
+    elo_object <- elo_object %>%
+      tail(n = 1) # select only the last row
+    
+    rownames(elo_object) <- NULL
+    
+    elo_object <- elo_object %>%
+      t() # use the transpose function in R to switch columns and rows
+    
+    elo_df <- as.data.frame(elo_object) %>%
+      cbind(rownames(elo_object), elo_object) %>%
+      select(2:3) %>%
+      rename(Team = "rownames(elo_object)", "Elo Rating" = "elo_object") %>%
+      mutate_if(is.numeric, round, digits = 2) %>%
+      arrange(desc("Elo Rating"))
+    
+    rownames(elo_df) <- NULL 
+    
+    return (elo_df)
+  }
+  
+
+```
+
+\# DOUBLE TABLE FUNCTION
+
+```{r}
+doubleTableFunc <- function(games){ 
+    games <- games %>%
+      rename(team = home_team, opponent = away_team,
+             team_score = home_score, opp_score = away_score) %>%
+      filter(!is.na(team_score & opp_score)) 
+    games2 <- games %>% # new data table flipping the columns
+      rename(team = opponent, opponent = team,
+             team_score = opp_score, opp_score = team_score)
+    double_table <- bind_rows(games, games2) # paste them together
+    double_table$Location = NA # add location variable
+    double_table$Location[0:length(double_table$date)/2] = 1
+    double_table[is.na(double_table)] = -1
+    
+    return(double_table)
+}
+```
+
+\# BESSEL FUNCTION for calculating expected points
+
+```{r}
+  probs <- function(lambda1, lambda2) {
+    prob_tie <-
+      besselI(2 * sqrt(lambda1 * lambda2), 0) * exp(-(lambda1 + lambda2))
+    
+    total <- 0
+    for (i in 1:10) {
+      prob_win_iteration <-
+        besselI(2 * sqrt(lambda1*lambda2),i)*(lambda1/lambda2)^(i/ 2)*
+        exp(-(lambda1 + lambda2))
+      
+      total = total + prob_win_iteration
+      i = i + 1
+      
+    }
+    
+    prob_win <- total
+    
+    prob_loss <- 1 - (prob_tie) - (prob_win)
+    
+    return(list(prob_win, prob_tie, prob_loss))
+  }
+```
+
+Function to compute Poisson ratings
+
+```{r}
+ poisfunction <- function(schedule) {
+    # based on a team's offensive and defensive ratings
+    #team_score is the home team score
+    model <-
+      glm(
+        team_score ~ team + opponent + Location,
+        data = doubleTableFunc(schedule),
+        family = poisson
+      ) # to build the poisson model
+    original <-
+      data.frame(x = model$coefficients,
+                 rating = exp(model$coefficients)) # to extract the coefficients
+    original$team <- rownames(original)
+    row.names(original) <- NULL
+    original <- original %>%
+      select(team, x, rating)
+    
+    
+    defAVG <- (original %>%
+                 filter(str_detect(team, "opponent") == TRUE) %>%
+                 summarise(sum(x) / (n() + 1)))[1, 1]
+    offAVG <- (original %>%
+                 filter(str_detect(team, "team") == TRUE) %>%
+                 summarise(sum(x) / (n() + 1)))[1, 1]
+    intercept <- (original$x)[1]
+    homeAdj <- original$rating[length(original$rating)]
+    adjusted <-
+      data.frame(team = unique(doubleTableFunc(schedule)$team))
+    adjusted <- data.frame(team = adjusted[order(adjusted$team), ])
+    adjusted$Off = append(0, original$x[2:(length(original$x) / 2)])
+    adjusted$Def = append(0, original$x[(length(original$x) / 2 + 1):(length(original$x) -
+                                                                        1)])
+    adjusted$OffAdj = adjusted$Off + defAVG + intercept
+    adjusted$DefAdj = adjusted$Def + offAVG + intercept
+    adjusted$expOff = exp(adjusted$Off + defAVG + intercept)
+    adjusted$expDef = exp(adjusted$Def + offAVG + intercept)
+    
+    # bump scoring rate to 0.05
+    adjusted$expOff[adjusted$expOff < 0.05] <- 0.05
+    
+    # bump defensive rate to 0.05
+    adjusted$expDef[adjusted$expDef < 0.05] <- 0.05
+    
+    #average offensive
+    avgPoisOffCoef <- mean(adjusted$OffAdj)
+    # average defensive
+    avgPoisDefCoef <- mean(adjusted$DefAdj)
+    avgPoisCoef <-
+      exp((avgPoisDefCoef + avgPoisOffCoef) / 2) # avg coefficient
+    scoreRate <-
+      mean(doubleTableFunc(schedule)$team_score) # average scoring rate
+    C = scoreRate / avgPoisCoef
+    poissonOFFavg = mean(adjusted$expOff)
+    poissonDEFavg = mean(adjusted$expDef)
+    D = sqrt(C * (poissonDEFavg / poissonOFFavg))
+    adjusted$newOffExp = adjusted$expOff * D
+    adjusted$newDefExp = adjusted$expDef * (C / D)
+    
+    returnedTable <- adjusted %>%
+      mutate(
+        OffRating = newOffExp,
+        DefRating = newDefExp,
+        OverallRating = newOffExp / newDefExp) %>%
+      rename(Team = "team") %>%
+      select(Team,
+             OffRating,
+             DefRating,
+             OverallRating) %>%
+      arrange(desc(OffRating))
+    returnedTable$OffRank = 1:nrow(returnedTable)
+    
+    returnedTable <- returnedTable %>%
+      arrange(DefRating)
+    returnedTable$DefRank = 1:nrow(returnedTable)
+    
+    returnedTable <- returnedTable %>%
+      arrange(desc(OverallRating)) %>%
+      mutate_if(is.numeric, round, digits = 2) %>%
+      select(
+        Team,
+        OverallRating,
+        OffRating,
+        OffRank,
+        DefRating,
+        DefRank
+      )
+    
+    avgOffRating <- mean(returnedTable$OffRating)
+    
+    sum = rep(0, length(returnedTable$Team))
+    
+    for (i in 1:length(returnedTable$Team)) {
+      for (j in 1:length(returnedTable$Team)) {
+        lambda1 = (returnedTable$OffRating[i] * returnedTable$DefRating[j]) / (avgOffRating)
+        
+        lambda2 = (returnedTable$OffRating[j] * returnedTable$DefRating[i]) / (avgOffRating)
+        
+        x <- probs(lambda1, lambda2)
+        sum[i] = sum[i] + (3 * x[[1]]) + x[[2]]
+      }
+    }
+    
+    expected_points <- sum / (length(returnedTable$Team))
+    returnedTable$OverallRating <- round(expected_points, 2)
+    
+    returnedTable <- returnedTable %>%
+      arrange(desc(OverallRating))
+    
+    returnedTable$Rank = 1:nrow(returnedTable)
+    
+    returnedTable <- returnedTable %>%
+      select(Rank, Team, OverallRating, OffRating, OffRank, DefRating, DefRank)
+    
+    return(list(returnedTable, homeAdj, avgOffRating))
+  }
+```
+
+Define the rpi functions for ppg and winpct
+
+```{r}
+rpi_function_ppg <- function(games, w1=(0.25), w2=(0.5), w3=(0.25)){
+    # w1, w2, w3 are weights
+    
+    stand <- standings2(games)
+    
+    games <- games %>%
+      rename(team = home_team, opponent = away_team, team_score = home_score, opp_score = away_score)
+    
+    games_2 <- games %>%
+      rename(team = opponent, opponent = team, team_score = opp_score, opp_score = team_score)
+    
+    double_table <- bind_rows(games, games_2)
+    
+    ppg1 <- left_join(double_table, stand, by = c("opponent" = "School")) %>%
+      select(team, PPG, 'Win Percentage')%>%
+      rename(opp_ppg = PPG)
+    
+    opp_ppg <- ppg1 %>%
+      group_by(team) %>%
+      mutate(avg_opp_ppg = mean(opp_ppg)) %>%
+      distinct(team, .keep_all = T) %>%
+      select(team, avg_opp_ppg)
+    
+    new_teams_ppg <- left_join(stand, opp_ppg, by = c("School" = "team")) %>%
+      rename("team" = "School")
+    
+    ppg2 <- left_join(double_table, new_teams_ppg, by = c("opponent" =
+                                                            "team")) %>%
+      select(-c(date, opp_score, team_score)) %>%
+      rename(opp_ppg = PPG)
+    
+    new_opp_ppg <- ppg2 %>%
+      group_by(team) %>%
+      mutate(avg_opp_opp_ppg = mean(avg_opp_ppg)) %>%
+      distinct(team, .keep_all = T) %>%
+      select(team, avg_opp_opp_ppg) 
+    
+    full_teams_ppg <- left_join(new_teams_ppg, new_opp_ppg, by = "team") %>%# to add opponents opponents points per game
+      mutate(RPI = (PPG*w1+avg_opp_ppg*w2+avg_opp_opp_ppg*w3)) %>%
+      arrange(desc(RPI)) %>%
+      select(team, RPI, PPG, avg_opp_ppg, avg_opp_opp_ppg) %>%
+      rename('Team' = team, 'RPI' = RPI, 'PPG' = PPG, 'OPPG' = avg_opp_ppg, 'OOPPG' = avg_opp_opp_ppg) %>%
+      mutate_if(is.numeric, round, digits = 3)
+    
+    full_teams_ppg$Rank = 1:nrow(full_teams_ppg)
+    
+    full_teams_ppg <- full_teams_ppg %>%
+      relocate(Rank)
+    
+    return(full_teams_ppg)
+  }
+```
+
+```{r}
+ rpi_function_wp <- function(games, w1=(0.25), w2=(0.5), w3=(0.25)){
+    
+    stand <- standings2(games)
+    
+    games <- games %>%
+      rename(team = home_team, opponent = away_team, team_score = home_score, opp_score = away_score)
+    
+    games_2 <- games %>%
+      rename(team = opponent, opponent = team, team_score = opp_score, opp_score = team_score)
+    
+    double_table <- bind_rows(games, games_2)
+    
+    wp1 <- left_join(double_table, stand, by = c("opponent" = "School")) %>%
+      select(team, PPG, 'Win Percentage')%>%
+      rename(opp_wp = 'Win Percentage')
+    
+    opp_wp <- wp1 %>%
+      group_by(team) %>%
+      mutate(avg_opp_wp = mean(opp_wp)) %>%
+      distinct(team, .keep_all = T) %>%
+      select(team, avg_opp_wp)
+    
+    new_teams_wp <- left_join(stand, opp_wp, by = c("School" = "team")) %>%
+      rename("team" = "School")
+    
+    wp2 <- left_join(double_table, new_teams_wp, by = c("opponent" =
+                                                          "team")) %>%
+      select(-c(date, opp_score, team_score)) %>%
+      rename(opp_wp = 'Win Percentage')
+    
+    new_opp_wp <- wp2 %>%
+      group_by(team) %>%
+      mutate(avg_opp_opp_wp = mean(avg_opp_wp)) %>%
+      distinct(team, .keep_all = T) %>%
+      select(team, avg_opp_opp_wp) 
+    
+    full_teams_wp <- left_join(new_teams_wp, new_opp_wp, by = "team") %>% # to add opponents opponents WP
+      rename(WP = 'Win Percentage') %>%
+      mutate(RPI = (WP*w1+avg_opp_wp*w2+avg_opp_opp_wp*w3)) %>%
+      arrange(desc(RPI)) %>%
+      select(team, RPI, WP, avg_opp_wp, avg_opp_opp_wp) %>%
+      rename('Team' = team, 'RPI' = RPI, 'WP' = WP, 'OWP' = avg_opp_wp, 'OOWP' = avg_opp_opp_wp) %>%
+      mutate_if(is.numeric, round, digits = 3)
+    
+    full_teams_wp$Rank = 1:nrow(full_teams_wp)
+    
+    full_teams_wp <- full_teams_wp %>%
+      relocate(Rank)
+    
+    
+    return(full_teams_wp)
+  }
+```
+
+Initialize dataframes to hold ranks
+
+```{r}
+ranks_elo_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_elo_2023) = ratings$team
+
+ranks_pois_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_pois_2023) = ratings$team
+
+ranks_ppg_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_ppg_2023) = ratings$team
+
+ranks_points_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_points_2023) = ratings$team
+
+ranks_rpi_ppg_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_rpi_ppg_2023) = ratings$team
+
+ranks_rpi_wp_2023 <- data.frame(matrix(ncol = nteams, nrow = 0))
+names(ranks_rpi_wp_2023) = ratings$team
+
+```
+
+```{r}
+# loop for simulating many seasons 
+n_games <- length(big_sched$away_team)
+numseasons=1000
+for(i in 1:numseasons){
+  
+  if((i/100) == round(i/100,0)){
+    print(i)
+  }
+  
+  v <- rep(1, n_games)
+  
+  one_season <- big_sched %>%
+    mutate(away_rate = score_rate(away_off, home_def, -1, home, avg_rating)) %>%
+    mutate(home_rate = score_rate(home_off, away_def, 1, home, avg_rating)) %>%
+    mutate(home_score = rpois(v, home_rate)) %>%
+    mutate(away_score = rpois(v, away_rate)) %>%
+    select(c(1:5,19,20))
+  
+  elo_season <- elo_rating_auto(one_season,KValue=30)
+  
+  ranks_elo_2023[i,] <- (nteams+1) - rank(elo_season$`Elo Rating`)
+  
+  poisson_season <- poisfunction(one_season)[[1]] %>%
+  arrange((Team))
+
+  ranks_pois_2023[i,] <- poisson_season$Rank
+  
+  ppg_season <- standings2(one_season)
+  ppg_season <- ppg_season[order(ppg_season$School),]
+  
+  ranks_ppg_2023[i,] <- (nteams+1) - rank(ppg_season$PPG) 
+  
+  points_season <- standings2(one_season)
+  points_season <- points_season[order(points_season$School),]
+  
+  ranks_points_2023[i,] <- (nteams+1) - rank(points_season$Points) 
+  
+  rpi_wp_season <- rpi_function_wp(one_season)
+  rpi_wp_season <- rpi_wp_season[order(rpi_wp_season$Team),]
+  
+  ranks_rpi_wp_2023[i,] <- (nteams+1) - rank(rpi_wp_season$RPI) 
+  
+  rpi_ppg_season <- rpi_function_ppg(one_season)
+  rpi_ppg_season <- rpi_ppg_season[order(rpi_ppg_season$Team),]
+  
+  ranks_rpi_ppg_2023[i,] <- (nteams+1) - rank(rpi_ppg_season$RPI) 
+
+  
+}
+ 
+```
+
+```{r}
+summary(ranks_elo_2023)
+```
+
+```{r}
+summary(ranks_pois_2023)
+```
+
+```{r}
+summary(ranks_rpi_wp_2023)
+```
+
+```{r}
+summary(ranks_ppg_2023)
+```
+
+```{r}
+summary(ranks_rpi_wp_2023)
+```
+
+```{r}
+elo_longer <- stack(ranks_elo_2023) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+  mutate(order = rep(ratings$Rank, each = numseasons)) 
+```
+
+```{r}
+sum((elo_longer$order - elo_longer$Rank)^2)/numseasons
+```
+
+```{r}
+pois_longer <- stack(ranks_pois_2023) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+  mutate(order = rep(ratings$Rank, each = numseasons)) 
+
+
+```
+
+```{r}
+sum((pois_longer$order - pois_longer$Rank)^2)/numseasons
+```
+
+```{r}
+# function for calculating mean squared error
+rank_mse <- function(ranks_file){
+  stat_longer <- stack(ranks_file) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+  mutate(order = rep(ratings$Rank, each = numseasons))  
+  
+mse <- round(sum((stat_longer$order - stat_longer$Rank)^2)/(numseasons*nteams), 2)
+
+return(mse)
+}
+```
+
+```{r}
+rank_mse(ranks_pois_2023)
+```
+
+```{r}
+# function for calculating mean absolute deviation
+rank_mad <- function(ranks_file){
+  stat_longer <- stack(ranks_file) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+ mutate(order = rep(ratings$Rank, each = numseasons))  
+  
+mad <- round(sum(abs(stat_longer$order - stat_longer$Rank))/(numseasons*nteams), 3)
+
+return(mad)
+}
+```
+
+```{r}
+rank_mad(ranks_pois_2023)
+```
+
+```{r}
+
+#our data 
+df_1 <- data.frame(Elo = c(rank_mad(ranks_elo_2023)),
+                  Poisson = c(rank_mad(ranks_pois_2023)),
+                  RPI_WP = c(rank_mad(ranks_rpi_wp_2023)),
+                  PPG = c(rank_mad(ranks_ppg_2023))
+                 )
+
+df_1
+```
+
+```{r}
+
+#our data 
+df_mse <- data.frame(Elo = c(rank_mse(ranks_elo_2023)),
+                  Poisson = c(rank_mse(ranks_pois_2023)),
+                  RPI_WP = c(rank_mse(ranks_rpi_wp_2023)),
+                  PPG = c(rank_mse(ranks_ppg_2023))
+                 )
+
+df_mse
+```
+
+```{r}
+rpi_wp_longer <- stack(ranks_rpi_wp_2023) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+ mutate(order = rep(ratings$Rank, each = numseasons)) 
+
+
+```
+
+```{r}
+ppg_longer <- stack(ranks_ppg_2023) %>%
+  rename("Rank" = "values") %>%
+  rename("Team" = "ind") %>%
+ mutate(order = rep(ratings$Rank, each = numseasons)) 
+
+
+```
+
+Plots:
+
+```{r}
+# elo ranking boxplot
+ggplot(data = elo_longer, aes(x = fct_reorder(Team, .x = order, .desc = TRUE), y = Rank, fill = "blue")) + geom_boxplot() + coord_flip() + theme_minimal() + labs(x = "Team", y = "Rank", title = "Elo Rankings for Three Leagues") + theme(legend.position = "none") + scale_y_continuous(breaks=c(1:nteams))
+```
+
+```{r}
+# pois ranking boxplot
+
+ggplot(data = pois_longer, aes(x = fct_reorder(Team, .x = order, .desc = TRUE), y = Rank, fill = "orange")) + geom_boxplot() + stat_summary(fun.y="mean", shape=3) + coord_flip() + theme_minimal() + labs(x = "Team", y = "Rank", title = "Poisson Rankings for Three Leagues") + theme(legend.position = "none") + scale_y_continuous(breaks=c(1:nteams))
+```
+
+```{r}
+# rpi_wp ranking boxplot
+
+ggplot(data = rpi_wp_longer, aes(x = fct_reorder(Team, .x = order, .desc = TRUE), y = Rank, fill = "orange")) + geom_boxplot() + coord_flip() + stat_summary(fun.y="mean", shape=3) + theme_minimal() + labs(x = "Team", y = "Rank", title = "RPI WP Rankings for Three Leagues") + theme(legend.position = "none") + scale_y_continuous(breaks=c(1:nteams))
+```
+
+```{r}
+# ppg ranking boxplot
+
+ggplot(data = ppg_longer, aes(x = fct_reorder(Team, .x = order, .desc = TRUE), y = Rank, fill = "orange")) + geom_boxplot() + stat_summary(fun.y="mean", shape=3) + coord_flip() + theme_minimal() + labs(x = "Team", y = "Rank", title = "PPG Rankings for Three Leagues") + theme(legend.position = "none") + scale_y_continuous(breaks=c(1:nteams))
+```

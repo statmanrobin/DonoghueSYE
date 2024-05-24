@@ -1,0 +1,130 @@
+---
+title: "RPI functions"
+format: html
+editor: visual
+---
+
+RPI function: RPI is a quantity used to rank sports teams based upon a team's wins and losses and strength of schedule.
+
+W1 = winning percentage W2 = Opponent's winning percentage W3 = Opponent's Opponent's winning percentage
+
+W1 is calculated by taking a team's wins divided by the number of games it has played
+
+W2 is calculated by taking the average of the W1 for each of the team's opponents with the requirement that all games against the team in question are removed from the equation
+
+W3 is calculated by taking the average of each Opponent's OWP. RPI function for PPG
+
+```{r}
+# PPG function takes in a schedule of games
+rpi_function_ppg <- function(games, w1=(0.25), w2=(0.5), w3=(0.25)){
+  # w1, w2, w3 are weights
+  
+  stand <- standings2(games)
+  
+  games <- games %>%
+    rename(team = home_team, opponent = away_team, team_score = home_score, opp_score = away_score)
+  
+  games_2 <- games %>%
+    rename(team = opponent, opponent = team, team_score = opp_score, opp_score = team_score)
+    
+  
+  double_table <- bind_rows(games, games_2)
+  
+  ppg1 <- left_join(double_table, stand, by = c("opponent" = "School")) %>%
+    select(team, PPG, 'Win Percentage')%>%
+    rename(opp_ppg = PPG)
+  
+  opp_ppg <- ppg1 %>%
+    group_by(team) %>%
+    mutate(avg_opp_ppg = mean(opp_ppg)) %>%
+    distinct(team, .keep_all = T) %>%
+    select(team, avg_opp_ppg)
+  
+  new_teams_ppg <- left_join(stand, opp_ppg, by = c("School" = "team")) %>%
+  rename("team" = "School")
+
+  
+  ppg2 <- left_join(double_table, new_teams_ppg, by = c("opponent" =
+"team")) %>%
+    select(-c(Date, opp_score, team_score)) %>%
+    rename(opp_ppg = PPG)
+  
+    
+new_opp_ppg <- ppg2 %>%
+    group_by(team) %>%
+    mutate(avg_opp_opp_ppg = mean(avg_opp_ppg)) %>%
+    distinct(team, .keep_all = T) %>%
+    select(team, avg_opp_opp_ppg) 
+
+
+  
+  
+  full_teams_ppg <- left_join(new_teams_ppg, new_opp_ppg, by = "team") %>%# to add opponents opponents points per game
+    mutate(RPI = (PPG*w1+avg_opp_ppg*w2+avg_opp_opp_ppg*w3)) %>%
+    arrange(desc(RPI)) %>%
+    select(team, RPI, PPG, avg_opp_ppg, avg_opp_opp_ppg) %>%
+    rename('Team' = team, 'RPI' = RPI, 'Points per game (PPG)' = PPG, 'Opponent\'s PPG' = avg_opp_ppg, 'Opponent\'s Opponent\'s PPG' = avg_opp_opp_ppg) %>%
+    mutate_if(is.numeric, round, digits = 2)
+  
+  return(full_teams_ppg)
+}
+```
+
+Test RPI function
+
+```{r}
+test_rpi_wp <- rpi_function_wp(schedule_function(schedule = D3_2023, conf = "LL"))
+```
+
+RPI function for Win Percentage:
+
+```{r}
+rpi_function_wp <- function(games, w1=(0.25), w2=(0.5), w3=(0.25)){
+  
+  stand <- standings2(games)
+  
+  games <- games %>%
+    rename(team = home_team, opponent = away_team, team_score = home_score, opp_score = away_score)
+  
+  games_2 <- games %>%
+    rename(team = opponent, opponent = team, team_score = opp_score, opp_score = team_score)
+    
+  
+  double_table <- bind_rows(games, games_2)
+  
+  wp1 <- left_join(double_table, stand, by = c("opponent" = "School")) %>%
+    select(team, PPG, 'Win Percentage')%>%
+    rename(opp_wp = 'Win Percentage')
+  
+
+  opp_wp <- wp1 %>%
+    group_by(team) %>%
+    mutate(avg_opp_wp = mean(opp_wp)) %>%
+    distinct(team, .keep_all = T) %>%
+    select(team, avg_opp_wp)
+  
+  new_teams_wp <- left_join(stand, opp_wp, by = c("School" = "team")) %>%
+  rename("team" = "School")
+  
+  wp2 <- left_join(double_table, new_teams_wp, by = c("opponent" =
+"team")) %>%
+    select(-c(Date, opp_score, team_score)) %>%
+    rename(opp_wp = 'Win Percentage')
+  
+  new_opp_wp <- wp2 %>%
+    group_by(team) %>%
+    mutate(avg_opp_opp_wp = mean(avg_opp_wp)) %>%
+    distinct(team, .keep_all = T) %>%
+    select(team, avg_opp_opp_wp) 
+  
+  full_teams_wp <- left_join(new_teams_wp, new_opp_wp, by = "team") %>% # to add opponents opponents WP
+    rename(WP = 'Win Percentage') %>%
+    mutate(RPI = (WP*w1+avg_opp_wp*w2+avg_opp_opp_wp*w3)) %>%
+    arrange(desc(RPI)) %>%
+    select(team, RPI, WP, avg_opp_wp, avg_opp_opp_wp) %>%
+    rename('Team' = team, 'RPI' = RPI, 'Winning Percentage (WP)' = WP, 'Opponent\'s WP' = avg_opp_wp, 'Opponent\'s Opponent\'s WP' = avg_opp_opp_wp) %>%
+    mutate_if(is.numeric, round, digits = 2)
+  
+  return(full_teams_wp)
+}
+```

@@ -1,0 +1,165 @@
+---
+title: "Poisson function"
+author: "H. Donoghue"
+format: html
+editor: visual
+---
+
+```{r}
+# bessel function calculations for expected points
+probs <- function(lambda1, lambda2){
+  
+  prob_tie <- besselI(2*sqrt(lambda1*lambda2), 0)*exp(-(lambda1+lambda2))
+  
+  total <- 0
+  for(i in 1:10){
+
+    prob_win_iteration <- besselI(2*sqrt(lambda1*lambda2), i)* (lambda1/lambda2)^(i/2) *exp(-(lambda1+lambda2))
+    
+    total = total + prob_win_iteration
+    i = i + 1
+    
+  }
+  
+  prob_win <- total
+  
+  prob_loss <- 1 - (prob_tie) - (prob_win)
+  
+return(list(prob_win, prob_tie, prob_loss))
+}
+```
+
+```{r}
+ratings <- poisfunction(schedule_function(conf = "LL"))[[1]]
+avg_rating <- mean(ratings$OffRating)
+sum = rep(0,length(ratings$team))
+
+for(i in 1:length(ratings$team)){
+  for(j in 1:length(ratings$team)){
+    lambda1 = (ratings$OffRating[i] * ratings$DefRating[j])/(avg_rating)
+    
+    lambda2 = (ratings$OffRating[j] * ratings$DefRating[i])/(avg_rating)
+    
+    x <- probs(lambda1, lambda2)
+    sum[i] = sum[i] + (3*x[[1]]) + x[[2]]
+  }
+}
+
+expected_points <- sum/(length(ratings$team))
+ratings$OverallRating <- round(expected_points,2)
+ratings$newWay <- ratings$OffRating/(ratings$DefRating + ratings$OffRating)
+```
+
+```{r}
+poisfunction <- function(schedule) {
+      # based on a team's offensive and defensive ratings
+      #team_score is the home team score
+      model <-
+        glm(
+          team_score ~ team + opponent + Location,
+          data = doubleTableFunc(schedule),
+          family = poisson
+        ) # to build the poisson model
+      original <-
+        data.frame(x = model$coefficients,
+                   rating = exp(model$coefficients)) # to extract the coefficients
+      original$team <- rownames(original)
+      row.names(original) <- NULL
+      original <- original %>%
+        select(team, x, rating)
+      
+      
+      defAVG <- (original %>%
+                   filter(str_detect(team, "opponent") == TRUE) %>%
+                   summarise(sum(x) / (n() + 1)))[1, 1]
+      offAVG <- (original %>%
+                   filter(str_detect(team, "team") == TRUE) %>%
+                   summarise(sum(x) / (n() + 1)))[1, 1]
+      intercept <- (original$x)[1]
+      homeAdj <- original$rating[length(original$rating)]
+      # print out the home adjustment coefficient
+      #print(homeAdj)
+      adjusted <-
+        data.frame(team = unique(doubleTableFunc(schedule)$team))
+      adjusted <- data.frame(team = adjusted[order(adjusted$team), ])
+      adjusted$Off = append(0, original$x[2:(length(original$x) / 2)])
+      adjusted$Def = append(0, original$x[(length(original$x) / 2 + 1):(length(original$x) -
+                                                                          1)])
+      adjusted$OffAdj = adjusted$Off + defAVG + intercept
+      adjusted$DefAdj = adjusted$Def + offAVG + intercept
+      adjusted$expOff = exp(adjusted$Off + defAVG + intercept)
+      adjusted$expDef = exp(adjusted$Def + offAVG + intercept)
+      
+      # bump scoring rate to 0.05
+       adjusted$expOff[adjusted$expOff < 0.05] <- 0.05
+      
+      # bump defensive rate to 0.05
+      adjusted$expDef[adjusted$expDef < 0.05] <- 0.05
+      
+      
+      #average offensive
+      avgPoisOffCoef <- mean(adjusted$OffAdj)
+      # average defensive
+      avgPoisDefCoef <- mean(adjusted$DefAdj)
+      avgPoisCoef <-
+        exp((avgPoisDefCoef + avgPoisOffCoef) / 2) # avg coefficient
+      scoreRate <-
+        mean(doubleTableFunc(schedule)$team_score) # average scoring rate
+      C = scoreRate / avgPoisCoef
+      poissonOFFavg = mean(adjusted$expOff)
+      poissonDEFavg = mean(adjusted$expDef)
+      D = sqrt(C * (poissonDEFavg / poissonOFFavg))
+      adjusted$newOffExp = adjusted$expOff * D
+      adjusted$newDefExp = adjusted$expDef * (C / D)
+      
+      returnedTable <- adjusted %>%
+        mutate(
+          OffRating = newOffExp,
+          DefRating = newDefExp,
+          OverallRating = newOffExp / newDefExp) %>%
+          rename(Team = "team") %>%
+        select(Team,
+               OffRating,
+               DefRating,
+               OverallRating) %>%
+        arrange(desc(OffRating))
+      returnedTable$OffRank = 1:nrow(returnedTable)
+      
+      returnedTable <- returnedTable %>%
+        arrange(DefRating)
+      returnedTable$DefRank = 1:nrow(returnedTable)
+      
+      returnedTable <- returnedTable %>%
+        arrange(desc(OverallRating)) %>%
+        mutate_if(is.numeric, round, digits = 3) %>%
+        select(
+          Team,
+          OverallRating,
+          OffRating,
+          OffRank,
+          DefRating,
+          DefRank
+        )
+      
+      avgOffRating <- mean(returnedTable$OffRating)
+      
+      sum = rep(0, length(returnedTable$Team))
+      
+      for (i in 1:length(returnedTable$Team)) {
+        for (j in 1:length(returnedTable$Team)) {
+          lambda1 = (returnedTable$OffRating[i] * returnedTable$DefRating[j]) / (avgOffRating)
+          
+          lambda2 = (returnedTable$OffRating[j] * returnedTable$DefRating[i]) / (avgOffRating)
+          
+          x <- probs(lambda1, lambda2)
+          sum[i] = sum[i] + (3 * x[[1]]) + x[[2]]
+        }
+      
+      }
+      
+      expected_points <- sum / (length(returnedTable$Team))
+      returnedTable$OverallRating <- round(expected_points, 2)
+      
+      return(list(returnedTable, homeAdj, avgOffRating))
+    }
+```

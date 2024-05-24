@@ -1,0 +1,262 @@
+---
+title: "Functions SYE Project"
+author: "Hope Donoghue"
+date: "2023-08-03"
+format: html 
+---
+
+Libraries:
+
+```{r}
+library(readr)
+library(rvest)
+library(dplyr)
+library(stringr)
+library(lubridate)
+```
+
+Functions:
+
+Function for modifying stats
+```{r}
+modify_stats_function <- function(date_results, date) {
+  date_results %>%
+  slice(-1) %>%
+  rename("Away" = X1) %>%
+  rename("Away Score" = X2) %>%
+  rename("Home" = X3) %>%
+  rename("Home Score" = X4)%>%
+  select(1:5) %>%
+  filter(X5 == "Final")%>%
+  select(1:4) %>%
+  mutate(Date = date) %>%
+  mutate(Home = str_remove(Home, "No\\. \\d+")) %>%
+  mutate(Away = str_remove(Away, "No\\. \\d+")) %>%
+  mutate(Home = str_remove(Home, "\r\n\r\n")) %>%
+  mutate(Away = str_remove(Away, "\r\n\r\n"))
+}
+  
+```
+
+```{r}
+function_webscrap <- function(date) {
+  year <- substr(date, 1, 4)
+  url <- paste("https://d3soccer.prestosports.com/seasons/women/", year, "/schedule?date=", date, sep = "") 
+  g <- read_html(url)
+  tab <- g %>% html_nodes("table")
+  objs <- tab %>% html_table()
+  table_clean <- modify_stats_function(objs[[1]], date)
+  
+  return(table_clean)
+
+}
+```
+
+
+
+```{r}
+start_date <- as.Date("2022-09-02")
+end_date <- as.Date("2022-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2022 <- function_webscrap("2022-09-01")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2022 <- rbind(D3_2022, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+
+Webscrape 2021 D3 data
+
+```{r}
+start_date <- as.Date("2021-09-02")
+end_date <- as.Date("2021-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2021 <- function_webscrap("2021-09-01")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2021 <- rbind(D3_2021, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+
+```{r}
+# write 2021 csv file
+write.csv(D3_2021, "D3_2021.csv", row.names = FALSE)
+```
+
+
+Webscrape 2019 D3 data
+```{r}
+start_date <- as.Date("2019-08-31")
+end_date <- as.Date("2019-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2019 <- function_webscrap("2019-08-30")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2019 <- rbind(D3_2019, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+```{r}
+# write 2019 csv file
+write.csv(D3_2019, "D3_2019.csv", row.names = FALSE)
+
+```
+
+Webscrape 2018 D3 data
+```{r}
+start_date <- as.Date("2018-09-01")
+end_date <- as.Date("2018-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2018 <- function_webscrap("2018-08-31")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2018 <- rbind(D3_2018, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+```{r}
+# write 2018 csv file
+write.csv(D3_2018, "D3_2018.csv", row.names = FALSE)
+
+```
+
+Webscrape 2017 D3 data
+```{r}
+start_date <- as.Date("2017-09-01")
+end_date <- as.Date("2017-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2017 <- function_webscrap("2017-08-31")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2017 <- rbind(D3_2017, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+```{r}
+# write 2017 csv file
+write.csv(D3_2017, "D3_2017.csv", row.names = FALSE)
+
+```
+
+Webscrape 2016 D3 data
+```{r}
+start_date <- as.Date("2016-09-02")
+end_date <- as.Date("2016-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2016 <- function_webscrap("2016-09-01")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2016 <- rbind(D3_2016, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+```{r}
+# write 2016 csv file
+write.csv(D3_2016, "D3_2016.csv", row.names = FALSE)
+
+```
+
+
+Webscrape 2015 D3 data
+```{r}
+start_date <- as.Date("2015-09-02")
+end_date <- as.Date("2015-12-04")
+dates <- seq(start_date,end_date, by = "day")
+
+D3_2015 <- function_webscrap("2015-09-01")
+
+new_date <- start_date
+
+
+while(new_date <= end_date){
+  
+  temp <- function_webscrap(as.character(new_date))
+  D3_2015 <- rbind(D3_2015, temp)
+  new_date = new_date + 1
+  
+}
+```
+
+```{r}
+# write 2015 csv file
+write.csv(D3_2015, "D3_2015.csv", row.names = FALSE)
+
+```
+
+
+Webscrape data for to get all D3 teams for the standings function  
+```{r}
+function_webscrape_D3 <- function(URL) {
+  url <- URL 
+  g <- read_html(url)
+  tab <- g %>% html_nodes("table")
+  objs <- tab %>% html_table()
+  table_clean <- objs[[2]]
+  return(table_clean)
+  
+}
+```
+
+```{r}
+all_teams <- function_webscrape_D3("https://d3soccer.prestosports.com/teams/index-women") %>%
+  slice(-1)%>%
+  rename("School" = X1) %>%
+  rename("Location" = X2) %>%
+  rename("Conference" = X3)
+```
+
+```{r}
+write.csv(all_teams, "D3_teams.csv", row.names = FALSE)
+```
+
+

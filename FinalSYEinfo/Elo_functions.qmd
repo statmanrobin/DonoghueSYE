@@ -1,0 +1,285 @@
+---
+title: "Elo Ratings"
+author: "H. Donoghue"
+format: html
+editor: visual
+---
+
+Elo ratings functions
+
+```{r}
+# Liberty League schedule 
+LL_schedule <- schedule_function(conf = 'LL', league_only = TRUE)
+```
+
+```{r}
+# Home team won = 1
+# Home team tied = 0.5
+# Home team lost = 0
+LL_schedule1 <- LL_schedule %>%
+  mutate(game_outcome = case_when (
+    home_score > away_score ~ 1,
+    home_score == away_score ~ 0.5,
+    TRUE ~ 0
+  ))
+```
+
+```{r}
+# practice 
+LL_schedule_2 <- LL_schedule1 %>%
+  mutate(weeks = c('1', '1', '1', '1', '2', '2', '2', '2', '2', '2', '2', '3', '3', '3', '3', '3', '3', '4', '4', '4', '4', '4', '4', '4', '4', '4', '5', '5', '5', '5', '5', '6', '6', '6', '6', '6', '6', '6', '6', '6', '7', '7', '7', '7', '7', '7', '7', '7', '7', '8'))
+```
+
+```{r}
+library(readr)
+elo_rating_LL <- read_csv("elo_rating_LL.csv")
+
+elo_rating_LL <- elo_rating_LL %>%
+  mutate(week = as.character(week))
+```
+
+```{r}
+# FUNCTIONS TO USE IN ELO RATING FUNCTION
+calc_expected_score <- function(team_rating, opp_team_rating) {
+  return(1 / (1 + 10^((opp_team_rating - team_rating) / 400)))
+}
+
+calc_new_rating <- function(team_rating, observed_score, expected_score, k_factor = 20) {
+  return(team_rating + k_factor * (observed_score - expected_score))
+}
+
+calc_observed <- function(home_score, away_score){
+  return(case_when (
+    home_score > away_score ~ 1,
+    home_score == away_score ~ 0.5,
+    TRUE ~ 0))
+  
+}
+```
+
+```{r}
+#test out functions
+calc_expected_score(1500, 1600)
+
+```
+
+```{r}
+# test out functions
+calc_observed(1, 1)
+```
+
+```{r}
+#test out updated rating function
+calc_new_rating(1500, 1, 0.5)
+```
+
+```{r}
+elo_rating <- function(schedule) {
+teams <- data.frame(team = c(schedule$home_team, schedule$away_team))
+
+elo_r <- teams %>%
+    group_by(team) %>%
+    mutate(elo_rating = 1500) %>%
+    distinct(team, .keep_all = T) 
+
+
+for(game in 1:nrow(schedule)){
+  
+  # Which teams are we looking at?
+  home_team <- schedule$home_team[game]
+  away_team <- schedule$away_team[game]
+  
+  home_score <- schedule$home_score[game]
+  away_score <- schedule$away_score[game]
+  
+  home_obs <- calc_observed(home_score, away_score)
+  away_obs <- 1-home_obs
+  
+  home_rating <- elo_r$elo_rating[match(home_team, elo_r$team)]
+  away_rating <- elo_r$elo_rating[match(away_team, elo_r$team)]
+  
+  home_expected <- calc_expected_score(home_rating, away_rating)
+  away_expected <- 1-home_expected
+  
+  home_new_rating <- calc_new_rating(home_rating, home_obs, home_expected)
+  away_new_rating <- calc_new_rating(away_rating, away_obs, away_expected)
+  
+  elo_r$elo_rating[match(home_team, elo_r$team)] <- home_new_rating
+  elo_r$elo_rating[match(away_team, elo_r$team)] <- away_new_rating
+}
+
+return (elo_r)
+}
+```
+
+```{r}
+nescac_sch <- schedule_function(conf = "NESCAC")
+nescac_elo_1 <- elo_rating(nescac_sch)
+elo_rating_d3 <- elo_rating(schedule_function())
+```
+
+USING THE ELO PACKAGE
+
+```{r}
+# elo package 
+library(elo)
+```
+
+score() will help calculate winners on the fly (1 = win, 0.5 = tie, 0 = loss)
+
+```{r}
+elo_data_nescac <- elo.run(score(home_score, away_score) ~ home_team + away_team, data = schedule_function(conf = "NESCAC"), k = 30)
+
+summary(elo_data_nescac)
+```
+
+```{r}
+elo_nescac <- (as.matrix(elo_data_nescac))
+```
+
+This is the same as the function above.
+
+http://cran.nexr.com/web/packages/elo/vignettes/elo.html
+
+https://cran.r-project.org/web/packages/elo/vignettes/running_elos.html
+
+The score() function in the "elo" package. The score() function helps to calculate winners on the fly (1 = win, 0.5 = tie, 0 = loss)
+
+USE THIS FORMULA with elo package
+```{r}
+# Elo rating using the elo package for wins
+elo_rating_auto <- function(schedule) {
+
+elo_ratings <- elo.run(score(home_score, away_score) ~ adjust(home_team, 30) + away_team + k(20+abs(home_score - away_score)*10), data = schedule)
+
+elo_object <- as.matrix(elo_ratings)
+
+elo_object <- elo_object %>%
+  tail(n=1) # select only the last row
+
+rownames(elo_object) <- NULL
+
+elo_object <- elo_object %>%
+  t() # use the transpose function in R to switch columns and rows
+
+elo_df <- as.data.frame(elo_object) %>%
+  cbind(rownames(elo_object), elo_object) %>%
+  select(2:3) %>%
+  rename(Team = "rownames(elo_object)", "Elo Rating" = "elo_object") %>%
+  arrange(desc("Elo Rating"))
+
+rownames(elo_df) <- NULL # to set the row headers to null so it is not just the college names
+
+return (elo_df)
+}
+```
+
+```{r}
+LL_1500 <- elo_rating_auto(schedule_function(schedule = D3_2023, conf = "LL"))
+```
+
+Elo function for setting initial elos to previous data, not 1500 as default
+
+```{r}
+# Elo rating using the elo package for wins with setting initial value
+elo_rating_set_initial <- function(schedule) {
+  
+elo_ratings <- elo.run(score(home_score, away_score) ~ adjust(home_team, 30) + away_team + k(20+abs(home_score - away_score)*10), data = schedule)
+
+# get the previous elo ratings to use as initial 
+initial_elos <- final.elos(elo_ratings)
+
+elo_ratings1 <- elo.run(score(home_score, away_score) ~ adjust(home_team, 30) + away_team + k(20+abs(home_score - away_score)*10), initial.elos = initial_elos, data = schedule)
+
+elo_object <- as.matrix(elo_ratings1)
+
+elo_object <- elo_object %>%
+  tail(n=1) # select only the last row
+
+rownames(elo_object) <- NULL
+
+elo_object <- elo_object %>%
+  t() # use the transpose function in R to switch columns and rows
+
+elo_df <- as.data.frame(elo_object) %>%
+  cbind(rownames(elo_object), elo_object) %>%
+  select(2:3) %>%
+  rename(Team = "rownames(elo_object)", "Elo Rating" = "elo_object") %>%
+  arrange(desc("Elo Rating"))
+
+rownames(elo_df) <- NULL # to set the row headers to null so it is not just the college names
+  
+
+return (elo_df)
+}
+```
+
+Used this paper as sample to find optimal k factor value https://opisthokonta.net/?p=1387
+
+```{r}
+kset <- seq(from = 100, to = 200, by = 5)
+elo_MSE <- vector(length = 21)
+
+for(kk in kset){
+elo_d3 <- elo.run(score(home_score, away_score) ~ home_team + away_team, data = schedule_function(), k = kk)
+
+elo_MSE[1+((kk-100)/5)] <- mse(elo_d3)
+}
+
+plot(elo_MSE~kset)
+
+```
+
+```{r}
+kk <- 0
+elo_MSE <- 0
+a <- 120
+b <- 1
+ndots <- 40
+for(dot in (1:ndots)){
+  kk[dot] = a + b *dot
+  elo_d3 <- elo.run(score(home_score, away_score) ~ home_team + away_team, data = schedule_function(), k = kk[dot])
+  elo_MSE[dot] <- mse(elo_d3)
+}
+
+# plot the graph 
+plot(elo_MSE~kk, xlab = "k", main = "Optimal k Value")
+```
+
+From the plot it looks like the optimal K value: is 140
+
+Adjusting for not default 1500. how sensitive your need for k given how close you are to the final rating
+
+start separated, so don't need to have larger k value.
+
+75 percent of old rating and 25 percent of new rating
+
+```{r}
+kk <- 0
+elo_MSE <- 0
+a <- 2
+b <- 1
+ndots <- 100
+
+elo_ratings <- elo.run(score(home_score, away_score) ~ home_team + away_team, k = 2000, data = schedule_function())
+
+# get the previous elo ratings to use as initial 
+initial_elos <- (final.elos(elo_ratings)*1) + 1500*0
+
+
+for(dot in (1:ndots)){
+  kk[dot] = a + b *dot
+
+elo_d3 <- elo.run(score(home_score, away_score) ~ home_team+ away_team, initial.elos = initial_elos, data = schedule_function(), k = kk[dot])
+  elo_MSE[dot] <- mse(elo_d3)
+}
+
+# plot the graph 
+plot(elo_MSE~kk)
+```
+
+```{r}
+summary(initial_elos)
+```
+
+How does the initial rating affect the choice of K? IF you are starting close to the optimal elo rating, you don't need to have a large k

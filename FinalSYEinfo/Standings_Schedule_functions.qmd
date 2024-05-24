@@ -1,0 +1,403 @@
+---
+title: "Comparing Teams D3"
+author: "H. Donoghue"
+format: html
+editor: visual
+---
+
+```{r}
+# Read in the two csv files
+library(readr)
+library(dplyr)
+D3_teams <- read_csv("~/SYE/D3_teams.csv")
+D3_teams_massey <- read_csv("D3_teams_Massey.csv")
+D3_2022 <- read_csv("D3_2022_massey.csv")
+```
+
+```{r}
+Away <- "Away"
+Home <- "Home"
+Teams <- "School"
+```
+
+```{r}
+list_of_D3_teams <- list(D3_teams$School)
+```
+
+```{r}
+test_schedule <- schedule_function(conf = "LL")
+```
+
+Schedule function:
+
+```{r}
+schedule_function <- function(schedule = D3_2022, team_list = D3_teams_massey, conf = "all", reg = "all", league_only = TRUE){
+  
+  if(conf != "all"){
+        team_list <- team_list %>%
+          filter(Conference == conf)
+      }
+      
+      if(reg != "all"){
+        team_list <- team_list %>%
+          filter(Region == reg)
+      }
+      
+      is_team_in_league_AWAY <- ifelse(schedule[['away_team']] %in% team_list$School, TRUE, FALSE)
+      is_team_in_league_HOME <- ifelse(schedule[['home_team']] %in% team_list$School, TRUE, FALSE)
+      df_Away <- as.data.frame(is_team_in_league_AWAY)
+      df_Home <- as.data.frame(is_team_in_league_HOME)
+      df_HOME_AWAY <- bind_cols(df_Away, df_Home, schedule)
+      
+      # schedule of teams in league since league_only is true
+      if(league_only){
+        
+        games <- df_HOME_AWAY %>%
+          filter(is_team_in_league_AWAY == TRUE & is_team_in_league_HOME == TRUE) %>% 
+          select(away_team, away_score, home_team, home_score, date)
+        
+        
+      } else { # want out of conference team schedule 
+        
+        games <- df_HOME_AWAY %>%
+          filter(is_team_in_league_AWAY == TRUE | is_team_in_league_AWAY == TRUE) %>%
+          select(away_team, away_score, home_team, home_score, date)
+      }
+      
+      return (games)
+   }
+```
+
+Standings function:
+
+```{r}
+standings_function <-
+  function(schedule = D3_2023,
+           team_list = D3_teams_massey,
+           conf = "all",
+           reg = "all",
+           league_only = TRUE) {
+    # if the user picks a specific conference rather than default of all conferences
+    if (conf != "all") {
+      team_list <- team_list %>%
+        filter(Conference == conf)
+    }
+    
+    # if the user picks a specific region rather than default of all regions
+    if (reg != "all") {
+      team_list <- team_list %>%
+        filter(Region == reg)
+    }
+    
+    is_team_in_league_AWAY <-
+      ifelse(schedule[['away_team']] %in% team_list$School, TRUE, FALSE)
+    is_team_in_league_HOME <-
+      ifelse(schedule[['home_team']] %in% team_list$School, TRUE, FALSE)
+    df_Away <- as.data.frame(is_team_in_league_AWAY)
+    df_Home <- as.data.frame(is_team_in_league_HOME)
+    df_HOME_AWAY <- bind_cols(df_Away, df_Home, schedule)
+    
+    # schedule of teams in league since league_only is true
+    if (league_only) {
+      games <- df_HOME_AWAY %>%
+        filter(is_team_in_league_AWAY == TRUE &
+                 is_team_in_league_HOME == TRUE) %>%
+        select(home_team, home_score, away_team, away_score, date)
+      
+      
+    } else {
+      # want out of conference team schedule
+      
+      games <- df_HOME_AWAY %>%
+        filter(is_team_in_league_AWAY == TRUE |
+                 is_team_in_league_AWAY == TRUE) %>%
+        select(home_team, home_score, away_team, away_score, date)
+    }
+    
+    # to get the home goals a teams scores and concedes
+    home_goals <- games %>%
+      group_by(home_team) %>%
+      summarize(
+        home_goals_for = sum(home_score, na.rm = TRUE),
+        home_goals_against = sum(away_score, na.rm = TRUE)
+      ) %>%
+      rename("School" = home_team)
+    
+    standings <- left_join(team_list, home_goals, by = "School")
+    
+    
+    # to get the away goals a team scores and concedes
+    away_goals <- games %>%
+      group_by(away_team) %>%
+      summarize(
+        away_goals_for = sum(away_score, na.rm = TRUE),
+        away_goals_against = sum(home_score, na.rm = TRUE)
+      ) %>%
+      rename("School" = away_team)
+    
+    standings <- left_join(standings, away_goals, by = "School")
+    
+    
+    # to get total goals and goal differential for each team
+    standings <- standings %>%
+      mutate(
+        goals_scored = (home_goals_for + away_goals_for),
+        goals_conceded = (home_goals_against + away_goals_against),
+        goal_differential = goals_scored - goals_conceded
+      )
+    
+    
+    # to get a team's home points
+    home_points <- games %>%
+      group_by(home_team) %>%
+      mutate(points = ifelse(
+        home_score > away_score,
+        3,
+        ifelse(home_score == away_score, 1, 0)
+      )) %>%
+      summarize(
+        home_points = sum(points, na.rm = TRUE),
+        home_wins = sum(points == 3, na.rm = TRUE),
+        home_ties = sum(points == 1, na.rm = TRUE),
+        home_losses = sum(points == 0, na.rm = TRUE)
+      ) %>%
+      rename("School" = home_team)
+    
+    standings <- left_join(standings, home_points, by = "School")
+    
+    # to get a team's away points
+    away_points <- games %>%
+      group_by(away_team) %>%
+      mutate(points = ifelse(
+        away_score > home_score,
+        3,
+        ifelse(home_score == away_score, 1, 0)
+      )) %>%
+      summarize(
+        away_points = sum(points, na.rm = TRUE),
+        away_wins = sum(points == 3, na.rm = TRUE),
+        away_ties = sum(points == 1, na.rm = TRUE),
+        away_losses = sum(points == 0, na.rm = TRUE)
+      ) %>%
+      rename("School" = away_team)
+    
+    standings <- left_join(standings, away_points, by = "School")
+    
+    # to get total points
+    standings <- standings %>%
+      mutate(
+        points = home_points + away_points,
+        wins = home_wins + away_wins,
+        ties = home_ties + away_ties,
+        losses = home_losses + away_losses,
+        record = paste(wins, losses, ties, sep = "-"),
+        games_played = wins + ties + losses,
+        ppg = round((points / games_played), 3),
+        goal_differential_pg = round((goal_differential / games_played), 3),
+        win_percentage = round(((wins + (
+          0.5 * ties
+        )) / games_played), 3)
+      )
+    
+    # to get standings
+    standings <- standings %>%
+      arrange(desc(points), desc(goal_differential)) %>%
+      select(
+        School,
+        points,
+        goal_differential,
+        goals_scored,
+        goals_conceded,
+        wins,
+        losses,
+        ties,
+        record,
+        games_played,
+        ppg,
+        goal_differential_pg,
+        win_percentage
+      ) %>%
+      rename(
+        Points = points,
+        'Goal Differential' = goal_differential,
+        'Goals Scored' = goals_scored,
+        'Goals Conceded' = goals_conceded,
+        Wins = wins,
+        Losses = losses,
+        Ties = ties,
+        'Record (W-L-T)' = record,
+        Games = games_played,
+        PPG = ppg,
+        'Goal Differential Per Game' = goal_differential_pg,
+        'Win Percentage' = win_percentage
+      )
+    
+    return(standings)
+  }
+```
+
+```{r}
+# function that takes in schedule of games with no extraneous teams
+standings2 <- function(games) {
+  # to get the home goals a teams scores and concedes
+  home_goals <- games %>%
+    group_by(home_team) %>%
+    summarize(
+      home_goals_for = sum(home_score, na.rm = TRUE),
+      home_goals_against = sum(away_score, na.rm = TRUE)
+    ) %>%
+    rename("School" = home_team)
+  
+  
+  # to get the away goals a team scores and concedes
+  away_goals <- games %>%
+    group_by(away_team) %>%
+    summarize(
+      away_goals_for = sum(away_score, na.rm = TRUE),
+      away_goals_against = sum(home_score, na.rm = TRUE)
+    ) %>%
+    rename("School" = away_team)
+  
+  standings <- left_join(home_goals, away_goals, by = "School")
+  
+  
+  # to get total goals and goal differential for each team
+  standings <- standings %>%
+    mutate(
+      goals_scored = (home_goals_for + away_goals_for),
+      goals_conceded = (home_goals_against + away_goals_against),
+      goal_differential = goals_scored - goals_conceded
+    )
+  
+  
+  # to get a team's home points
+  home_points <- games %>%
+    group_by(home_team) %>%
+    mutate(points = ifelse(
+      home_score > away_score,
+      3,
+      ifelse(home_score == away_score, 1, 0)
+    )) %>%
+    summarize(
+      home_points = sum(points, na.rm = TRUE),
+      home_wins = sum(points == 3, na.rm = TRUE),
+      home_ties = sum(points == 1, na.rm = TRUE),
+      home_losses = sum(points == 0, na.rm = TRUE)
+    ) %>%
+    rename("School" = home_team)
+  
+  standings <- left_join(standings, home_points, by = "School")
+  
+  # to get a team's away points
+  away_points <- games %>%
+    group_by(away_team) %>%
+    mutate(points = ifelse(
+      away_score > home_score,
+      3,
+      ifelse(home_score == away_score, 1, 0)
+    )) %>%
+    summarize(
+      away_points = sum(points, na.rm = TRUE),
+      away_wins = sum(points == 3, na.rm = TRUE),
+      away_ties = sum(points == 1, na.rm = TRUE),
+      away_losses = sum(points == 0, na.rm = TRUE)
+    ) %>%
+    rename("School" = away_team)
+  
+  standings <- left_join(standings, away_points, by = "School")
+  
+  # to get total points
+  standings <- standings %>%
+    mutate(
+      points = home_points + away_points,
+      wins = home_wins + away_wins,
+      ties = home_ties + away_ties,
+      losses = home_losses + away_losses,
+      record = paste(wins, losses, ties, sep = "-"),
+      games_played = wins + ties + losses,
+      ppg = (points / games_played),
+      goal_differential_pg = (goal_differential / games_played),
+      win_percentage = ((wins + (0.5 * ties)) / games_played)
+    )
+  
+  
+  
+  # standings
+  standings <- standings %>%
+    arrange(desc(points), desc(goal_differential)) %>%
+    select(
+      School,
+      points,
+      goal_differential,
+      goals_scored,
+      goals_conceded,
+      wins,
+      losses,
+      ties,
+      record,
+      games_played,
+      ppg,
+      goal_differential_pg,
+      win_percentage
+    ) %>%
+    rename(
+      Points = points,
+      'Goal Differential' = goal_differential,
+      'Goals Scored' = goals_scored,
+      'Goals Conceded' = goals_conceded,
+      Wins = wins,
+      Losses = losses,
+      Ties = ties,
+      'Record (W-L-T)' = record,
+      Games = games_played,
+      PPG = ppg,
+      'Goal Differential Per Game' = goal_differential_pg,
+      'Win Percentage' = win_percentage
+    )
+  
+  return(standings)
+}
+```
+
+Test data:
+
+```{r}
+region1.schedule <- schedule_function(reg = "Region I", league_only = FALSE)
+```
+
+```{r}
+LL_teams_out_of_conference <- schedule_function(conf = "LL", league_only = FALSE)
+```
+
+```{r}
+schedule <- schedule_function()
+```
+
+```{r}
+region_3_standings <- standings_function(schedule = D3_2023, reg = "Region III")
+```
+
+```{r}
+LL <- schedule_function(conf = "LL")
+```
+
+```{r}
+# TO MAKE liberty league regular season games only
+LL.rs <- LL[1:45,]
+```
+
+```{r}
+write.csv(LL.rs, "LL_reg_season.csv", row.names = FALSE)
+```
+
+```{r}
+test<- standings2(games = LL_2023)
+```
+
+```{r}
+write.csv(test, "Standings_D3.csv", row.names = FALSE)
+```
+
+```{r}
+Standings_D3 <- read_csv("Standings_D3.csv")
+```

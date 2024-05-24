@@ -1,0 +1,172 @@
+away_team,away_score,home_team,home_score,date,Row
+Alfred,0,Geneseo St,2,Fri 09.01,1
+Cortland St,1,Rensselaer,1,Fri 09.01,2
+Elmira,1,Ithaca,10,Fri 09.01,3
+Keuka,0,Buffalo St,3,Fri 09.01,4
+Nazareth,1,St Lawrence,1,Fri 09.01,5
+Brockport St,0,Skidmore,1,Fri 09.01,7
+Hartwick,1,Suny Oneonta,1,Fri 09.01,8
+Russell Sage,0,Suny New Paltz,2,Fri 09.01,10
+Nazareth,0,Clarkson,3,Sat 09.02,12
+Buffalo St,2,Houghton,1,Sat 09.02,13
+St John Fisher,1,Skidmore,1,Sat 09.02,14
+Plattsburgh St,3,Rochester Tech,1,Sun 09.03,15
+Suny New Paltz,1,Rensselaer,2,Sun 09.03,16
+Alfred,1,Suny Oneonta,4,Tue 09.05,19
+Brockport St,1,St John Fisher,0,Tue 09.05,21
+St Lawrence,0,Suny Potsdam,1,Tue 09.05,22
+Geneseo St,1,Hobart & Smith,2,Wed 09.06,23
+Keuka,0,Brockport St,3,Thu 09.07,27
+Utica,0,Oswego St,1,Fri 09.08,29
+St John Fisher,0,Geneseo St,2,Sat 09.09,30
+Houghton,0,Brockport St,6,Sat 09.09,31
+Rensselaer,2,Plattsburgh St,2,Sat 09.09,32
+Suny Potsdam,0,Skidmore,1,Sat 09.09,33
+Utica,0,Suny Fredonia,2,Sat 09.09,34
+Alfred,1,Suny Fredonia,1,Tue 09.12,37
+Suny Potsdam,0,Utica,1,Tue 09.12,38
+Ithaca,0,Cortland St,1,Wed 09.13,40
+Geneseo St,0,Nazareth,0,Wed 09.13,42
+Plattsburgh St,0,Skidmore,1,Wed 09.13,43
+Suny Oneonta,1,Union NY,1,Wed 09.13,45
+St John Fisher,2,Rochester Tech,1,Wed 09.13,46
+Union NY,1,Utica,2,Fri 09.15,47
+Cortland St,0,Clarkson,1,Sat 09.16,48
+St John Fisher,1,Alfred,1,Sat 09.16,49
+Rochester Tech,1,Geneseo St,2,Sat 09.16,50
+Elmira,0,Houghton,1,Sat 09.16,51
+Nazareth,0,Ithaca,2,Sat 09.16,52
+Hartwick,0,Keuka,2,Sat 09.16,53
+Suny Potsdam,0,Suny Oneonta,2,Sat 09.16,56
+St Lawrence,0,Oswego St,0,Sat 09.16,57
+Oswego St,1,Keuka,0,Tue 09.19,59
+St Lawrence,2,Union NY,0,Tue 09.19,60
+Skidmore,0,Clarkson,2,Wed 09.20,61
+Geneseo St,2,Suny Fredonia,0,Wed 09.20,62
+Hobart & Smith,1,Rochester Tech,1,Wed 09.20,63
+Plattsburgh St,0,Suny Potsdam,0,Wed 09.20,64
+Brockport St,2,Buffalo St,0,Wed 09.20,66
+Rochester Tech,1,Clarkson,0,Sat 09.23,72
+Alfred,2,Utica,2,Sat 09.23,73
+Suny Fredonia,0,Cortland St,7,Sat 09.23,74
+Geneseo St,0,Suny Oneonta,0,Sat 09.23,75
+Skidmore,1,Hobart & Smith,1,Sat 09.23,76
+Ithaca,4,Bard,0,Sat 09.23,77
+Keuka,0,Russell Sage,1,Sat 09.23,78
+Hartwick,1,Nazareth,1,Sat 09.23,79
+Brockport St,0,Plattsburgh St,0,Sat 09.23,80
+Buffalo St,0,Suny New Paltz,9,Sat 09.23,82
+St Lawrence,0,Rensselaer,0,Sat 09.23,84
+Union NY,0,Vassar,0,Sat 09.23,85
+Oswego St,0,Suny Potsdam,0,Sat 09.23,87
+Cortland St,2,Suny Potsdam,0,Wed 09.27,95
+Ithaca,0,Hobart & Smith,1,Wed 09.27,96
+Nazareth,1,Houghton,0,Wed 09.27,97
+Suny New Paltz,2,Plattsburgh St,0,Wed 09.27,98
+Utica,1,Hartwick,1,Wed 09.27,99
+Oswego St,1,Brockport St,0,Wed 09.27,100
+Buffalo St,2,Suny Fredonia,7,Wed 09.27,101
+Russell Sage,1,Elmira,0,Wed 09.27,102
+Vassar,0,Bard,0,Wed 09.27,103
+Clarkson,0,Hobart & Smith,3,Sat 09.30,104
+Alfred,0,Russell Sage,0,Sat 09.30,105
+Cortland St,0,Buffalo St,0,Sat 09.30,106
+Suny New Paltz,1,Geneseo St,1,Sat 09.30,107
+Houghton,0,Utica,3,Sat 09.30,108
+Ithaca,2,St Lawrence,0,Sat 09.30,109
+Keuka,0,Nazareth,6,Sat 09.30,110
+Plattsburgh St,1,Oswego St,0,Sat 09.30,111
+Vassar,2,Skidmore,1,Sat 09.30,112
+Suny Oneonta,0,Brockport St,1,Sat 09.30,114
+Elmira,0,St John Fisher,1,Sat 09.30,115
+Rochester Tech,7,Bard,0,Sat 09.30,117
+Rensselaer,0,Union NY,2,Sat 09.30,118
+Suny Potsdam,0,Suny Fredonia,4,Sat 09.30,119
+Rochester Tech,1,Nazareth,1,Tue 10.03,124
+Skidmore,2,Hartwick,0,Tue 10.03,125
+Bard,0,Rensselaer,4,Tue 10.03,126
+Alfred,0,Brockport St,3,Wed 10.04,127
+Cortland St,3,Suny Oneonta,2,Wed 10.04,128
+Buffalo St,0,Geneseo St,0,Wed 10.04,129
+Keuka,2,St John Fisher,5,Wed 10.04,130
+St Lawrence,3,Plattsburgh St,1,Wed 10.04,131
+Utica,1,Elmira,0,Wed 10.04,133
+Vassar,2,Russell Sage,1,Wed 10.04,137
+Suny Potsdam,0,Suny New Paltz,5,Wed 10.04,138
+Suny Fredonia,2,Oswego St,2,Wed 10.04,139
+Clarkson,0,Ithaca,1,Sat 10.07,141
+Geneseo St,0,Cortland St,0,Sat 10.07,142
+Russell Sage,0,Houghton,1,Sat 10.07,143
+Utica,5,Keuka,1,Sat 10.07,144
+Nazareth,2,Elmira,0,Sat 10.07,145
+Suny Fredonia,0,Plattsburgh St,1,Sat 10.07,146
+Skidmore,0,Rensselaer,2,Sat 10.07,147
+Oswego St,2,Suny Oneonta,0,Sat 10.07,148
+Brockport St,2,Suny New Paltz,2,Sat 10.07,149
+Buffalo St,0,Suny Potsdam,5,Sat 10.07,150
+St Lawrence,0,Rochester Tech,2,Sat 10.07,152
+Bard,0,Union NY,3,Sat 10.07,153
+St John Fisher,2,Hartwick,2,Sat 10.07,155
+Alfred,2,Keuka,0,Wed 10.11,164
+Plattsburgh St,1,Cortland St,1,Wed 10.11,165
+Geneseo St,1,Oswego St,1,Wed 10.11,166
+St John Fisher,0,Nazareth,0,Wed 10.11,167
+Suny Oneonta,0,Suny New Paltz,7,Wed 10.11,168
+Russell Sage,0,Utica,0,Wed 10.11,169
+Suny Fredonia,0,Brockport St,1,Wed 10.11,170
+Rensselaer,0,Hobart & Smith,3,Fri 10.13,173
+Skidmore,1,Rochester Tech,1,Fri 10.13,174
+Bard,1,Clarkson,3,Fri 10.13,175
+Vassar,0,St Lawrence,1,Fri 10.13,176
+Union NY,0,Ithaca,1,Fri 10.13,177
+Vassar,1,Clarkson,0,Sat 10.14,178
+Cortland St,0,Brockport St,0,Sat 10.14,179
+Geneseo St,2,Suny Potsdam,0,Sat 10.14,180
+Houghton,2,Hartwick,0,Sat 10.14,181
+Skidmore,0,Ithaca,1,Sat 10.14,182
+Utica,0,Nazareth,1,Sat 10.14,183
+Plattsburgh St,3,Buffalo St,3,Sat 10.14,184
+Suny Fredonia,0,Suny Oneonta,2,Sat 10.14,187
+Bard,0,St Lawrence,2,Sat 10.14,189
+Rensselaer,0,Rochester Tech,2,Sat 10.14,190
+Russell Sage,0,St John Fisher,1,Sat 10.14,191
+Suny New Paltz,0,Oswego St,0,Sat 10.14,192
+Union NY,0,Hobart & Smith,2,Sat 10.14,193
+Elmira,1,Alfred,1,Sun 10.15,196
+Clarkson,6,Suny Potsdam,0,Tue 10.17,199
+Alfred,2,Houghton,0,Wed 10.18,201
+Suny New Paltz,0,Cortland St,1,Wed 10.18,202
+Brockport St,0,Geneseo St,0,Wed 10.18,203
+Nazareth,0,Hobart & Smith,2,Wed 10.18,204
+Suny Oneonta,0,Plattsburgh St,2,Wed 10.18,205
+St Lawrence,3,Utica,0,Wed 10.18,208
+Oswego St,2,Buffalo St,0,Wed 10.18,209
+Hartwick,0,Elmira,0,Wed 10.18,210
+Clarkson,2,Rensselaer,0,Sat 10.21,215
+Cortland St,3,Oswego St,0,Sat 10.21,216
+Plattsburgh St,1,Geneseo St,0,Sat 10.21,217
+Hobart & Smith,3,Bard,0,Sat 10.21,218
+Houghton,0,St John Fisher,5,Sat 10.21,219
+Vassar,0,Ithaca,0,Sat 10.21,220
+Nazareth,0,Russell Sage,0,Sat 10.21,221
+St Lawrence,0,Skidmore,0,Sat 10.21,223
+Suny Oneonta,3,Buffalo St,5,Sat 10.21,225
+Suny Potsdam,1,Brockport St,3,Sat 10.21,226
+Elmira,0,Keuka,0,Sat 10.21,227
+Suny New Paltz,0,Suny Fredonia,1,Sat 10.21,228
+Rochester Tech,3,Union NY,1,Sat 10.21,229
+Hartwick,0,Alfred,0,Sat 10.21,231
+Hobart & Smith,0,Vassar,0,Sun 10.22,234
+Clarkson,2,St Lawrence,0,Tue 10.24,235
+Rochester Tech,0,Ithaca,0,Tue 10.24,236
+Keuka,1,Houghton,3,Wed 10.25,243
+Nazareth,2,Alfred,0,Wed 10.25,244
+St John Fisher,1,Utica,1,Wed 10.25,245
+Rensselaer,1,Vassar,0,Wed 10.25,246
+Russell Sage,2,Hartwick,0,Wed 10.25,247
+Union NY,1,Skidmore,1,Wed 10.25,248
+Hobart & Smith,6,St Lawrence,0,Sat 10.28,250
+Ithaca,2,Rensselaer,2,Sat 10.28,251
+Bard,0,Skidmore,5,Sat 10.28,252
+Clarkson,2,Union NY,1,Sat 10.28,253
+Rochester Tech,0,Vassar,0,Sat 10.28,254

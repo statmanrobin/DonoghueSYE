@@ -1,0 +1,195 @@
+---
+title: "Massey Rating Web Scrape Function"
+author: "Hope Donoghue"
+format: html
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(xml2)
+library(rvest)
+library(chromote)
+library(tidyr)
+library(stringr)
+library(lubridate)
+```
+
+```{r}
+url <- "https://masseyratings.com/csocw/ncaa-d3/games?dt=20230916"
+```
+
+```{r}
+c <- ChromoteSession$new()
+{
+  c$Page$navigate(url)
+  c$Page$loadEventFired()
+}
+
+```
+
+```{r}
+html <- c$Runtime$evaluate("document.querySelector('html').outerHTML")$result$value %>%
+  read_html()
+```
+
+```{r}
+half_table <- ".vatop"
+```
+
+```{r}
+html2 <- html %>%
+  html_elements(half_table) %>%
+  html_text2() %>%
+  matrix(ncol = 6, byrow = TRUE) %>%
+  data.frame()
+
+html2 <- html2[-c(1, 22, 43, 64, 85, 106, 127, 148),]
+  
+```
+
+```{r}
+half_table2 <- "#tbl a"
+html3 <- html %>%
+  html_elements(half_table2) %>%
+  html_text2() %>%
+  matrix(ncol = 4, byrow = TRUE) %>%
+  data.frame()
+
+
+```
+
+```{r}
+sept_16_2023 <- cbind(html2, html3) 
+
+names(sept_16_2023)[2] <- "score" 
+names(sept_16_2023)[9] <- "home_team"
+names(sept_16_2023)[10] <- "away_team"
+names(sept_16_2023)[7] <- "date"
+
+sept_16_2023 <- sept_16_2023 %>%
+  select(score, home_team, away_team, date) %>%
+  separate(score, into = c("home_score", "away_score"), sep = "\n") %>%
+  mutate(away_team = str_remove(away_team, "@")) %>%
+  mutate(away_team = str_trim(away_team, "left")) %>%
+  select(home_team, home_score, away_team, away_score, date)
+
+```
+
+
+FUNCTIONS: 
+```{r}
+modify_stats_function <- function(date_results, date) {
+   date_results <- date_results
+names(date_results)[2] <- "score" 
+names(date_results)[9] <- "home_team"
+names(date_results)[10] <- "away_team"
+names(date_results)[7] <- "date"
+
+d3_schedule <- date_results %>%
+  select(score, home_team, away_team, date) %>%
+  separate(score, into = c("home_score", "away_score"), sep = "\n") %>%
+  mutate(away_team = str_remove(away_team, "@")) %>%
+  mutate(away_team = str_trim(away_team, "left")) %>%
+  select(home_team, home_score, away_team, away_score, date)
+}
+```
+
+
+```{r}
+function_webscrap <- function(date) {
+  print(date)
+  url <- paste("https://masseyratings.com/csocw/ncaa-d3/games?dt=", date, sep = "") 
+  c <- ChromoteSession$new()
+  c$Page$navigate(url, wait = FALSE)
+  c$Page$loadEventFired()
+  
+  print("Got page")
+
+html <- c$Runtime$evaluate("document.querySelector('html').outerHTML")$result$value %>%
+  read_html()
+
+  half_table <- ".vatop"
+  
+  html2 <- html %>%
+  html_elements(half_table) %>%
+  html_text2() %>%
+  matrix(ncol = 6, byrow = TRUE) %>%
+  data.frame()
+
+html2 <- html2[-c(1, 22, 43, 64, 85, 106, 127, 148, 169, 190, 211, 232, 253, 274, 295),]
+
+half_table2 <- "#tbl a"
+
+html3 <- html %>%
+  html_elements(half_table2) %>%
+  html_text2() %>%
+  matrix(ncol = 4, byrow = TRUE) %>%
+  data.frame()
+
+schedule <- cbind(html2, html3) 
+
+table_clean <- modify_stats_function(schedule, date)
+
+c$close()
+
+return(table_clean)
+
+}
+```
+
+
+
+```{r}
+start <- "20221101"
+start_date <- as.integer(start)
+end_date <- as.integer("20221130")
+dates <- seq(start_date,end_date, by = 1)
+
+D3_2022_massey_d <- function_webscrap(start)
+
+new_date <- start_date + 1
+
+
+while(new_date <= end_date){
+  
+  print(new_date)
+  temp <- function_webscrap(as.character(new_date))
+  D3_2022_massey_d <- rbind(D3_2022_massey_d, temp)
+  new_date = new_date + 1
+  
+}
+
+
+```
+
+```{r}
+sept_2023 <- rbind(D3_2023a, D3_2023_b, D3_2023_c, D3_2023_d)
+```
+
+
+```{r}
+nov_2023 <- D3_2023 %>%
+  distinct()
+```
+
+
+```{r}
+oct_2023 <- oct_2023 %>%
+  distinct()
+```
+
+```{r}
+sept_2023 <- sept_2023 %>%
+  distinct()
+```
+
+```{r}
+D3_2023 <- rbind(sept_2023, oct_2023, nov_2023)
+```
+
+```{r}
+write.csv(D3_2023, "D3_2023.csv")
+```
+
+
